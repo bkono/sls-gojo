@@ -18,9 +18,11 @@ import (
 )
 
 var (
-	indexTmpl = template.New("index.html")
+	indexTmpl  = template.New("index.html")
+	DefaultTTL = 1 * time.Minute
 )
 
+// migrate this to within index with sync.Once pattern
 func init() {
 	index, err := Asset("template/index.html")
 	if err != nil {
@@ -86,8 +88,8 @@ func (s *Server) create() http.HandlerFunc {
 		e := &justonce.Entry{
 			ID:        ksuid.New().String(),
 			Msg:       msg,
-			TTL:       120,
-			CreatedAt: time.Now(),
+			CreatedAt: time.Now().Unix(),
+			ExpiresAt: time.Now().Add(DefaultTTL).Unix(),
 		}
 
 		err := table.Put(e).Run()
@@ -134,7 +136,18 @@ func (s *Server) get() http.HandlerFunc {
 			return
 		}
 
-		w.Write([]byte(entry.Msg))
+		if time.Now().Unix() > entry.ExpiresAt {
+			w.Write([]byte("msg has expired"))
+
+		} else {
+			w.Write([]byte(entry.Msg))
+		}
+
+		err = table.Delete("id", id).Run()
+		if err != nil {
+			log.Println("err deleting entry", err)
+			// queue up another attempt?
+		}
 	}
 }
 

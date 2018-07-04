@@ -83,8 +83,9 @@ resources:  # CloudFormation template syntax
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
-        SSESpecification:
-          SSEEnabled: true
+        TimeToLiveSpecification:
+          AttributeName: expires_at
+          Enabled: true
 plugins:
     - serverless-dynamodb-local
     - serverless-offline
