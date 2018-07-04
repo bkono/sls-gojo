@@ -1,15 +1,14 @@
 package main
 
 import (
-		"log"
+	"log"
 	"net/http"
 
 	"github.com/bkono/sls-gojo/web"
 )
 
 func main() {
-	router := web.NewHandler()
+	s := web.NewServer()
 	log.Println("starting on :3000")
-	log.Fatal(http.ListenAndServe(":3000", router))
+	log.Fatal(http.ListenAndServe(":3000", s.Router))
 }
-

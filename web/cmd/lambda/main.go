@@ -8,6 +8,8 @@ import (
 )
 
 func main() {
-	router := web.NewHandler()
-	log.Fatal(gateway.ListenAndServe(":3000", router))
+	s := web.NewServer()
+	log.Println("starting on :3000")
+	log.Fatal(gateway.ListenAndServe(":3000", s.Router))
+
 }
