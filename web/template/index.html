@@ -5,7 +5,7 @@
     <!--Let browser know website is optimized for mobile-->
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="https://fonts.googleapis.com/css?family=Montserrat" rel="stylesheet">
-    <link rel="stylesheet" href="/{{if .HasStage}}{{.Stage}}/{{end}}public/application.css">
+    <link rel="stylesheet" href="{{.BaseURL}}/public/application.css">
 </head>
 
 <body>
@@ -14,7 +14,9 @@
         <h1>Just Once</h1>
         <p class="subtitle">Send a message that self destructs after one view</p>
         <div class="container">
-            <form id="secretform" action="/{{if .HasStage}}{{.Stage}}/{{end}}create" method="POST" enctype="multipart/form-data">
+
+            {{if .CanCreate}}
+            <form id="secretform" action="{{.BaseURL}}/create" method="POST" enctype="multipart/form-data">
 
                 <div class="input-field">
                     <!--Upload Secret File: <input id='file-input' type="file" name="file" size=25></br>-->
@@ -28,9 +30,10 @@
                 </div>
             </form>
             <div class="divider"></div>
+            {{else}}
             <div class="success-encrypted">
                 <div class="output-field">
-                    <textarea id="url" class="textarea" readonly=true></textarea>
+                    <textarea id="url" class="textarea" readonly=true>{{.Msg}}</textarea>
                 </div>
                 <div class="button">
                     <button class="btn clipboard" data-clipboard-target="#url">
@@ -38,6 +41,7 @@
                     </button>
                 </div>
             </div>
+            {{end}}
         </div>
     </div>
 
@@ -45,3 +49,7 @@
 </body>
 <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.7.1/clipboard.min.js"></script>
+<script type="text/javascript">
+    new Clipboard(".btn");
+</script>
+

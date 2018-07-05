@@ -51,6 +51,7 @@
     "service/dynamodb",
     "service/dynamodb/dynamodbattribute",
     "service/dynamodb/dynamodbiface",
+    "service/kms",
     "service/sts"
   ]
   revision = "e4f914808a9655ef3220bb0082002239cc7f3561"
@@ -96,6 +97,17 @@
 
 [[projects]]
   branch = "master"
+  name = "golang.org/x/crypto"
+  packages = [
+    "internal/subtle",
+    "nacl/secretbox",
+    "poly1305",
+    "salsa20/salsa"
+  ]
+  revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/net"
   packages = ["context"]
   revision = "ed29d75add3d7c4bf7ca65aac0c6df3d1420216f"
@@ -103,6 +115,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "2c2372bb0e159f656c5b871ea95bd84b6cef589459a1bf052ebf88c01aa4fcc2"
+  inputs-digest = "815a57f1adceb6f6acf46de26bde758a229312058ae4aadfc0733af7ea7b5472"
   solver-name = "gps-cdcl"
   solver-version = 1

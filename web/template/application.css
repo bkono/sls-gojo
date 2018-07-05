@@ -10,7 +10,7 @@ html,body {
     min-width: 100vw;
     min-height: 100vh;
     font-family: 'Montserrat', sans-serif;
-    background-image: linear-gradient(to bottom left, #3e366a, #09112f);
+    background-image: linear-gradient(to bottom left, #8360c3, #2ebf91);
     -webkit-font-smoothing: antialiased;
     display: flex;
     align-items: center;
@@ -30,6 +30,8 @@ textarea{
     min-height: 170px;
     transition: 200ms ease-in-out;
     width: 100%;
+    text-align: justify;
+    text-align-last: center;
 }
 
 button {
@@ -67,11 +69,7 @@ button {
 }
 
 .success-encrypted {
-    position: absolute;
-    top: 0;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
+    position: relative;
     width: 100%;
 }
 .subtitle {

@@ -3,7 +3,6 @@ package web
 //go:generate go-bindata -pkg web -o template.go template/
 
 import (
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/kms"
 	"github.com/bkono/sls-gojo"
 	"github.com/guregu/dynamo"
 	"github.com/segmentio/ksuid"
@@ -19,8 +19,14 @@ import (
 
 var (
 	indexTmpl  = template.New("index.html")
-	DefaultTTL = 1 * time.Minute
+	defaultTTL = 24 * time.Hour
 )
+
+type indexData struct {
+	BaseURL   string
+	CanCreate bool
+	Msg       string
+}
 
 // migrate this to within index with sync.Once pattern
 func init() {
@@ -54,16 +60,7 @@ func (s *Server) public(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	data := struct {
-		Stage    string
-		HasStage bool
-	}{
-		Stage:    s.stage,
-		HasStage: s.hasStage(),
-	}
-
-	indexTmpl.Execute(w, data)
+	s.renderForm(w, r)
 }
 
 func (s *Server) create() http.HandlerFunc {
@@ -72,40 +69,45 @@ func (s *Server) create() http.HandlerFunc {
 		sess  *session.Session
 		db    *dynamo.DB
 		table dynamo.Table
+		kmscl *kms.KMS
 	)
 	return func(w http.ResponseWriter, r *http.Request) {
 		init.Do(func() {
 			sess = session.Must(session.NewSession())
 			db = dynamo.New(sess)
 			table = db.Table(s.tableName)
+			kmscl = kms.New(sess)
 		})
 
 		msg := r.FormValue("msg")
 		if len(msg) == 0 {
-			http.Error(w, "msg is required", 400)
+			s.renderMsg(w, r, "msg is required")
+		}
+
+		msgBytes, err := encrypt(kmscl, s.kmsKeyID, []byte(msg))
+		if err != nil {
+			log.Printf("failed encrypting entry, err = %v\n", err)
+			s.renderMsg(w, r, "failed saving entry")
+			return
 		}
 
 		e := &justonce.Entry{
 			ID:        ksuid.New().String(),
-			Msg:       msg,
+			Msg:       msgBytes,
 			CreatedAt: time.Now().Unix(),
-			ExpiresAt: time.Now().Add(DefaultTTL).Unix(),
+			ExpiresAt: time.Now().Add(defaultTTL).Unix(),
 		}
 
-		err := table.Put(e).Run()
+		err = table.Put(e).Run()
 		if err != nil {
 
 			log.Printf("failed saving entry, err = %v\n", err)
-			http.Error(w, "failed saving entry", 500)
+			s.renderMsg(w, r, "failed saving entry")
 			return
 		}
 
-		base := fmt.Sprintf("https://%s", r.Host)
-		if s.hasStage() {
-			base = fmt.Sprintf("%s/%s", base, s.stage)
-		}
-
-		w.Write([]byte(fmt.Sprintf("%s/get/%s", base, e.ID)))
+		base := s.baseURL(r)
+		s.renderMsg(w, r, base+"/get/"+e.ID)
 	}
 }
 
@@ -115,55 +117,88 @@ func (s *Server) get() http.HandlerFunc {
 		sess  *session.Session
 		db    *dynamo.DB
 		table dynamo.Table
+		kmscl *kms.KMS
 	)
 	return func(w http.ResponseWriter, r *http.Request) {
 		init.Do(func() {
 			sess = session.Must(session.NewSession())
 			db = dynamo.New(sess)
 			table = db.Table(s.tableName)
+			kmscl = kms.New(sess)
 		})
 
 		id := Param(r.Context(), "id")
 		var entry justonce.Entry
 		err := table.Get("id", id).One(&entry)
 		if err == dynamo.ErrNotFound {
-			w.Write([]byte("msg already removed"))
+			s.renderMsg(w, r, "msg already removed")
 			return
 		}
 		if err != nil {
 			log.Printf("failed retrieving entry, err = %v\n", err)
-			http.Error(w, "failed retrieving entry", 500)
+			s.renderMsg(w, r, "msg not retrievable")
 			return
 		}
 
 		if time.Now().Unix() > entry.ExpiresAt {
-			w.Write([]byte("msg has expired"))
-
-		} else {
-			w.Write([]byte(entry.Msg))
+			s.renderMsg(w, r, "msg has expired")
+			deleteID(table, id)
+			return
 		}
 
-		err = table.Delete("id", id).Run()
+		txt, err := decrypt(kmscl, entry.Msg)
 		if err != nil {
-			log.Println("err deleting entry", err)
-			// queue up another attempt?
+			log.Printf("failed decrypting entry, err = %v\n", err)
+			s.renderMsg(w, r, "msg not retrievable")
+			return
 		}
+
+		s.renderMsg(w, r, string(txt))
+		deleteID(table, id)
 	}
 }
 
-func (s *Server) requireTableName(h http.HandlerFunc) http.HandlerFunc {
+func deleteID(table dynamo.Table, id string) {
+	err := table.Delete("id", id).Run()
+	if err != nil {
+		log.Println("err deleting entry", err)
+		// queue up another attempt?
+	}
+}
+
+func (s *Server) renderForm(w http.ResponseWriter, r *http.Request) {
+	s.renderIndex(w, r, "", true)
+}
+
+func (s *Server) renderMsg(w http.ResponseWriter, r *http.Request, msg string) {
+	s.renderIndex(w, r, msg, false)
+}
+
+func (s *Server) renderIndex(w http.ResponseWriter, r *http.Request, msg string, canCreate bool) {
+	data := &indexData{
+		BaseURL:   s.baseURL(r),
+		Msg:       msg,
+		CanCreate: canCreate,
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	indexTmpl.Execute(w, data)
+}
+
+func (s *Server) requireAWSEnvs(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if len(s.tableName) == 0 {
-			http.Error(w, "table not configured", http.StatusInternalServerError)
+		if len(s.tableName) == 0 || len(s.kmsKeyID) == 0 {
+			http.Error(w, "table and kms key required", http.StatusInternalServerError)
 			return
 		}
+
 		h(w, r)
 	}
 }
 
 func (s *Server) routes() {
+	s.Router.HandleFunc("GET", "/", s.index)
 	s.Router.HandleFunc("GET", "/home", s.index)
-	s.Router.HandleFunc("POST", "/create", s.requireTableName(s.create()))
-	s.Router.HandleFunc("GET", "/get/:id", s.requireTableName(s.get()))
+	s.Router.HandleFunc("POST", "/create", s.requireAWSEnvs(s.create()))
+	s.Router.HandleFunc("GET", "/get/:id", s.requireAWSEnvs(s.get()))
 	s.Router.HandleFunc("GET", "/public/:asset", s.public)
 }

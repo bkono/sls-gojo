@@ -7,3 +7,7 @@ build:
 
 gen:
 	go generate ./web/...
+
+deploy: gen build
+	sls deploy -v
+
