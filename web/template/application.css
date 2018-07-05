@@ -83,3 +83,9 @@ button {
     text-align: center;
     color: white;
 }
+
+.homelink {
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}

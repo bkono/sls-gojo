@@ -145,6 +145,7 @@ resources:  # CloudFormation template syntax
       Value:
         Fn::GetAtt: [entriesCMK, Arn]
 plugins:
+    - serverless-sam
     - serverless-dynamodb-local
     - serverless-offline
 

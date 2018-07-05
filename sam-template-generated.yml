@@ -1,0 +1,207 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 'SAM template for Serverless framework service: '
+Resources:
+  entriesCMK:
+    Type: 'AWS::KMS::Key'
+    Properties:
+      Description: Key to generate data keys for gojo
+      KeyPolicy:
+        Version: '2012-10-17'
+        Id: keypolicy-gojo-entries-cmk-dev
+        Statement:
+          - Sid: Allow administration of the key
+            Effect: Allow
+            Principal:
+              AWS:
+                - 'Fn::Join':
+                    - ':'
+                    - - 'arn:aws:iam:'
+                      - Ref: 'AWS::AccountId'
+                      - root
+            Action:
+              - 'kms:Create*'
+              - 'kms:Describe*'
+              - 'kms:Enable*'
+              - 'kms:List*'
+              - 'kms:Put*'
+              - 'kms:Update*'
+              - 'kms:Revoke*'
+              - 'kms:Disable*'
+              - 'kms:Get*'
+              - 'kms:Delete*'
+              - 'kms:ScheduleKeyDeletion'
+              - 'kms:CancelKeyDeletion'
+            Resource: '*'
+          - Sid: Allow use of the key by gojo
+            Effect: Allow
+            Principal:
+              AWS:
+                'Fn::GetAtt':
+                  - IamRoleLambdaExecution
+                  - Arn
+            Action:
+              - 'kms:Encrypt'
+              - 'kms:Decrypt'
+              - 'kms:ReEncrypt*'
+              - 'kms:GenerateDataKey*'
+              - 'kms:DescribeKey'
+            Resource: '*'
+  entriesTable:
+    Type: 'AWS::DynamoDB::Table'
+    Properties:
+      TableName: gojo-entries-dev
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      ProvisionedThroughput:
+        ReadCapacityUnits: 1
+        WriteCapacityUnits: 1
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
+  Web:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: bin/web
+      Runtime: go1.x
+      CodeUri: /Users/bkonowitz/src/github.com/bkono/sls-gojo/.serverless/gojo.zip
+      MemorySize: 128
+      Timeout: 3
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - 'dynamodb:DescribeTable'
+                - 'dynamodb:Query'
+                - 'dynamodb:Scan'
+                - 'dynamodb:GetItem'
+                - 'dynamodb:PutItem'
+                - 'dynamodb:UpdateItem'
+                - 'dynamodb:DeleteItem'
+              Resource:
+                - 'Fn::Join':
+                    - ':'
+                    - - 'arn:aws:dynamodb'
+                      - Ref: 'AWS::Region'
+                      - Ref: 'AWS::AccountId'
+                      - table/gojo-entries-dev
+      Environment:
+        Variables:
+          KMS_KEY_ID:
+            'Fn::GetAtt':
+              - entriesCMK
+              - Arn
+          STAGE: dev
+          TABLE_NAME: gojo-entries-dev
+      Events:
+        Event1:
+          Type: Api
+          Properties:
+            Path: /create
+            Method: post
+            RestApiId:
+              Ref: Gojo
+        Event2:
+          Type: Api
+          Properties:
+            Path: '/get/{id}'
+            Method: get
+            RestApiId:
+              Ref: Gojo
+        Event3:
+          Type: Api
+          Properties:
+            Path: /home
+            Method: get
+            RestApiId:
+              Ref: Gojo
+        Event4:
+          Type: Api
+          Properties:
+            Path: '/public/{asset}'
+            Method: get
+            RestApiId:
+              Ref: Gojo
+        Event5:
+          Type: Api
+          Properties:
+            Path: /
+            Method: get
+            RestApiId:
+              Ref: Gojo
+  Gojo:
+    Type: 'AWS::Serverless::Api'
+    Properties:
+      StageName: dev
+      DefinitionBody:
+        swagger: '2.0'
+        info:
+          title:
+            Ref: 'AWS::StackName'
+        paths:
+          /create:
+            post:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri:
+                  'Fn::Sub': >-
+                    arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Web.Arn}/invocations
+              responses: {}
+          '/get/{id}':
+            get:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri:
+                  'Fn::Sub': >-
+                    arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Web.Arn}/invocations
+              responses: {}
+          /home:
+            get:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri:
+                  'Fn::Sub': >-
+                    arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Web.Arn}/invocations
+              responses: {}
+          '/public/{asset}':
+            get:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri:
+                  'Fn::Sub': >-
+                    arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Web.Arn}/invocations
+              responses: {}
+          /:
+            get:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri:
+                  'Fn::Sub': >-
+                    arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${Web.Arn}/invocations
+              responses: {}
+  WebLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    DependsOn:
+      - Web
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        Ref: Web
+      Principal: apigateway.amazonaws.com
+Outputs:
+  entriesCMKArn:
+    Description: ARN for the entries CMK
+    Value:
+      'Fn::GetAtt':
+        - entriesCMK
+        - Arn

@@ -195,10 +195,32 @@ func (s *Server) requireAWSEnvs(h http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+var (
+	bots = []string{
+		"Slack", "Facebot", "Twitter", "facebook", "Applebot", "LinkedInBot", "SkypeUriPreview",
+		"Googlebot", "AdsBot", "Feedfetcher", "bingbot", "Slurp", "msnbot",
+	}
+)
+
+func (s *Server) ignoreTheBots(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		log.Println("request received, ua", r.UserAgent())
+		for _, bot := range bots {
+			if strings.Contains(r.UserAgent(), bot) {
+				log.Println("ua includes a bot, short circuiting request", bot)
+				w.Write([]byte(bot + " preview not available"))
+				return
+			}
+		}
+
+		h(w, r)
+	}
+}
+
 func (s *Server) routes() {
-	s.Router.HandleFunc("GET", "/", s.index)
-	s.Router.HandleFunc("GET", "/home", s.index)
-	s.Router.HandleFunc("POST", "/create", s.requireAWSEnvs(s.create()))
-	s.Router.HandleFunc("GET", "/get/:id", s.requireAWSEnvs(s.get()))
+	s.Router.HandleFunc("GET", "/", s.ignoreTheBots(s.index))
+	s.Router.HandleFunc("GET", "/home", s.ignoreTheBots(s.index))
+	s.Router.HandleFunc("POST", "/create", s.ignoreTheBots(s.requireAWSEnvs(s.create())))
+	s.Router.HandleFunc("GET", "/get/:id", s.ignoreTheBots(s.requireAWSEnvs(s.get())))
 	s.Router.HandleFunc("GET", "/public/:asset", s.public)
 }
