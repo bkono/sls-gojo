@@ -31,7 +31,7 @@ textarea{
     transition: 200ms ease-in-out;
     width: 100%;
     text-align: justify;
-    text-align-last: center;
+    text-align-last: left;
 }
 
 button {

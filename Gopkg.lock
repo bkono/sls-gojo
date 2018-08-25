@@ -3,22 +3,27 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:6819bdc6b1a92cc0e9aa992e898b7ed4b61e2f5973d36f208e10d24a7615a8ab"
   name = "github.com/apex/gateway"
   packages = ["."]
+  pruneopts = ""
   revision = "cdfe71df1421609687c01dda11f13ef068784e5b"
 
 [[projects]]
+  digest = "1:d5039f72505274cddd25fef3b4790e7d985eaf063a0c7df1363ed6292ddc30fb"
   name = "github.com/aws/aws-lambda-go"
   packages = [
     "events",
     "lambda",
     "lambda/messages",
-    "lambdacontext"
+    "lambdacontext",
   ]
+  pruneopts = ""
   revision = "6e2e37798efbb1dfd8e9c6681702e683a6046517"
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:d0bf4cfbcd5baa9f1f1f20433b2e23af4507d46b42a4cf0bca3c332824933bbd"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -52,69 +57,94 @@
     "service/dynamodb/dynamodbattribute",
     "service/dynamodb/dynamodbiface",
     "service/kms",
-    "service/sts"
+    "service/sts",
   ]
+  pruneopts = ""
   revision = "e4f914808a9655ef3220bb0082002239cc7f3561"
   version = "v1.14.19"
 
 [[projects]]
+  digest = "1:f619cb9b07aebe5416262cdd8b86082e8d5bdc5264cb3b615ff858df0b645f97"
   name = "github.com/cenkalti/backoff"
   packages = ["."]
+  pruneopts = ""
   revision = "2ea60e5f094469f9e65adb9cd103795b73ae743e"
   version = "v2.0.0"
 
 [[projects]]
+  digest = "1:617b3e0f5989d4ff866a1820480990c65dfc9257eb080da749a45e2d76681b02"
   name = "github.com/go-ini/ini"
   packages = ["."]
+  pruneopts = ""
   revision = "06f5f3d67269ccec1fe5fe4134ba6e982984f7f5"
   version = "v1.37.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:19435fddce93bfc9e6cdaf98fdceabf306f28eee0699334c35278a12850bf863"
   name = "github.com/guregu/dynamo"
   packages = [
     ".",
-    "internal/exprs"
+    "internal/exprs",
   ]
+  pruneopts = ""
   revision = "e38c48c566f44b8dbaa18ec7c429e43194f7233a"
 
 [[projects]]
+  digest = "1:6f49eae0c1e5dab1dafafee34b207aeb7a42303105960944828c2079b92fc88e"
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
+  pruneopts = ""
   revision = "0b12d6b5"
 
 [[projects]]
+  digest = "1:7365acd48986e205ccb8652cc746f09c8b7876030d53710ea6ef7d0bd0dcd7ca"
   name = "github.com/pkg/errors"
   packages = ["."]
+  pruneopts = ""
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
 
 [[projects]]
+  digest = "1:fef42d7c5058ace2f987bb1540fdfd030e2310c5039d0262694afd82258da297"
   name = "github.com/segmentio/ksuid"
   packages = ["."]
+  pruneopts = ""
   revision = "112f929a3020abfcd06b77c963ec919130796a35"
   version = "1.0.1"
 
 [[projects]]
   branch = "master"
+  digest = "1:6ef14be530be39b6b9d75d54ce1d546ae9231e652d9e3eef198cbb19ce8ed3e7"
   name = "golang.org/x/crypto"
   packages = [
     "internal/subtle",
     "nacl/secretbox",
     "poly1305",
-    "salsa20/salsa"
+    "salsa20/salsa",
   ]
+  pruneopts = ""
   revision = "a49355c7e3f8fe157a85be2f77e6e269a0f89602"
 
 [[projects]]
   branch = "master"
+  digest = "1:157ada2ba59eefcc8ec96a9bcd9c46121cbb8c33f8f8c869dc92dc117c66d552"
   name = "golang.org/x/net"
   packages = ["context"]
+  pruneopts = ""
   revision = "ed29d75add3d7c4bf7ca65aac0c6df3d1420216f"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "815a57f1adceb6f6acf46de26bde758a229312058ae4aadfc0733af7ea7b5472"
+  input-imports = [
+    "github.com/apex/gateway",
+    "github.com/aws/aws-lambda-go/lambda",
+    "github.com/aws/aws-sdk-go/aws/session",
+    "github.com/aws/aws-sdk-go/service/kms",
+    "github.com/guregu/dynamo",
+    "github.com/segmentio/ksuid",
+    "golang.org/x/crypto/nacl/secretbox",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
